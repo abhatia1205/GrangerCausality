@@ -9,7 +9,7 @@ from ModelInterface import ModelInterface
 import torch
 import numpy as np
 from GVAR.sennmodels.senn import SENNGC
-from GVAR.training import training_procedure_stable, training_procedure, run_epoch
+from GVAR.training import training_procedure_stable
 from GVAR.utils import construct_training_dataset
 import random
 import torch.optim as optim

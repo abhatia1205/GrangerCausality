@@ -28,10 +28,18 @@ if(__name__ == "__main__"):
     gt = "/home2/s215863/Desktop/Granger Causality/FinanceCPT/relationships/random-rels_20_1_3.csv"
     series, causality_graph = DataGenerator.finance(file, gt)
     n = int(0.8*len(series))
-    lstmTester = TCDFTester(series[:n], cuda = True)
-    lstmTester.trainInherit()
+    lstmTester = GVARTester(series[:n], cuda = False)
+    lstmTester2 = GVARTester(series[:n], cuda = False)
+    lstmTester.train()
+    lstmTester2.trainInherit()
     metrics = Metrics(lstmTester, causality_graph, series)
     metrics.vis_pred(timepoints = 500)
     metrics.vis_causal_graphs()
     metrics.prec_rec_acc_f1()
+    
+    metrics = Metrics(lstmTester2, causality_graph, series)
+    metrics.vis_pred(timepoints = 500)
+    metrics.vis_causal_graphs()
+    metrics.prec_rec_acc_f1()
+    
     print("Done")
