@@ -75,6 +75,8 @@ class TCDFTester(ModelInterface):
         data_y = torch.from_numpy(self.X.astype('float32'))
         X_train, Y_train = Variable(data_x).cuda(), Variable(data_y).cuda()
         self.X_train, self.Y_train = X_train, Y_train
+        print("X_train: ",X_train)
+        print("Y_train: ",Y_train)
         return X_train, Y_train
     
     def pretrain_procedure(self):
@@ -83,9 +85,9 @@ class TCDFTester(ModelInterface):
         self.firstloss = [0 for i in range(self.num_vars)]
         b_gen = self.batch_generator(X_train, Y_train)
         for x_batch, y_batch in b_gen:
-            for idx, network in enumerate(self.model.networks):
-                pred = self.model.networks[idx](x_batch)
-                self.firstloss[idx] += F.mse_loss(pred, y_batch[:, :, idx], reduction='sum')
+            pred = self.model.forward(x_batch)
+            for idx in range(self.num_vars):
+                self.firstloss[idx] += F.mse_loss(pred[:,:,idx], y_batch[:, :, idx])
     
     def posttrain_procedure(self):
         self.model.eval()
@@ -93,9 +95,9 @@ class TCDFTester(ModelInterface):
         self.realloss = [0 for i in range(self.num_vars)]
         b_gen = self.batch_generator(X_train, Y_train)
         for x_batch, y_batch in b_gen:
-            for idx, network in enumerate(self.model.networks):
-                pred = self.model.networks[idx](x_batch)
-                self.realloss[idx] += F.mse_loss(pred, y_batch[:, :, idx], reduction = 'sum')
+            pred = self.model.forward(x_batch)
+            for idx in range(self.num_vars):
+                self.realloss[idx] += F.mse_loss(pred[:,:,idx], y_batch[:, :, idx])
     
     def batch_generator(self, X, Y):
         yield X.unsqueeze(0).contiguous(), Y.unsqueeze(0).contiguous()
@@ -104,7 +106,7 @@ class TCDFTester(ModelInterface):
         return self.model.forward(X)
     
     def lossfn(self, pred, Y):
-        return F.mse_loss(pred, Y, reduction = 'sum')
+        return sum([F.mse_loss(pred[:,:,i], Y[:,:,i]) for i in range(self.num_vars)])
     
     def make_causal_estimate(self):
         def estimate_model(idx):
@@ -150,15 +152,16 @@ class TCDFTester(ModelInterface):
             for idx in potentials:
                 random.seed(1111)
                 X_test2 = X_train.clone().cpu().numpy()
+                print(X_test2.shape, ": test hape")
                 random.shuffle(X_test2[:,idx,:][0])
                 shuffled = torch.from_numpy(X_test2)
                 if self.cuda:
                     shuffled=shuffled.cuda()
                 model.eval()
-                output = model(shuffled)
-                testloss = F.mse_loss(output, Y_train[:,:,idx], reduction='sum')
+                output = self.model.forward(shuffled)
+                testloss = F.mse_loss(output[:,:,idx], Y_train[:,:,idx], reduction='sum')
                 testloss = testloss.cpu().data.item()
-                
+                self.testloss=testloss
                 diff = firstloss- realloss
                 testdiff = firstloss -testloss
                 significance = 0.8
@@ -177,14 +180,18 @@ class TCDFTester(ModelInterface):
         ret = np.zeros((N,N))
         for key, l in self.allcauses.items():
             ret[key, l] = 1
+        self.pred_graph = ret
         return ret
+    
+    def make_GC_graph(self):
+        return self.pred_graph
         
 
 class TCDFTesterOrig(ModelInterface):
     
     def __init__(self, X, cuda = False):
         
-        super(TCDFTester, self).__init__(cuda)
+        super(TCDFTesterOrig, self).__init__(cuda)
         self.X = X
         self.num_vars = self.X.shape[1]
         self.allcauses = None
@@ -201,7 +208,7 @@ class TCDFTesterOrig(ModelInterface):
         self.model = ConcatTCDF(self.num_vars, self.layers, self.kernel_size, self.cuda, self.kernel_size).cuda()
         self.parameters = self.model.parameters()
     
-    def findcauses2(self, x_train, target, epochs =5000, 
+    def findcauses2(self, x_train, target, epochs =500, 
                log_interval = 500, lr = 0.01, optimizername = "Adam", seed = 1111, significance = 0.8):
         """Discovers potential causes of one target time series, validates these potential causes with PIVM and discovers the corresponding time delays"""
     
@@ -210,7 +217,8 @@ class TCDFTesterOrig(ModelInterface):
         
         Y_train = np.expand_dims(x_train[:, target], 0).astype('float32') #get the time series for selected target
         X_train = np.copy(x_train)
-        X_train[:, target] = np.insert(X_train[:-1, target], 0, 0) #remove current info for time signal (lag x by 1)
+        X_train = np.vstack((np.zeros(self.num_vars), self.X[:-1, :]))
+        #X_train[:, target] = np.insert(X_train[:-1, target], 0, 0) #remove current info for time signal (lag x by 1)
         X_train = X_train.astype('float32').transpose()
         data_x = torch.from_numpy(X_train)
         data_y = torch.from_numpy(Y_train)
@@ -218,9 +226,6 @@ class TCDFTesterOrig(ModelInterface):
         
         X_train = X_train.unsqueeze(0).contiguous() #batch size 1
         Y_train = Y_train.unsqueeze(2).contiguous()
-        
-        print("x train: ", X_train.shape)
-        print("y train: ", Y_train.shape)
               
         model = self.models[target]
         if self.cuda:

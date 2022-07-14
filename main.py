@@ -15,10 +15,11 @@ ddd
 
 from Metrics import Metrics
 from DataGenerator import DataGenerator
-from GVARTester import GVARTester
+from GVARTester import GVARTester, GVARTesterStable
 from cLSTMTester import cLSTMTester
-from TCDFTester import TCDFTester
+from TCDFTester import TCDFTester, TCDFTesterOrig
 import numpy as np
+import matplotlib.pyplot as plt
 
 if(__name__ == "__main__"):
     lorenz_generator = DataGenerator(DataGenerator.lorenz96_func)
@@ -28,18 +29,23 @@ if(__name__ == "__main__"):
     gt = "/home2/s215863/Desktop/Granger Causality/FinanceCPT/relationships/random-rels_20_1_3.csv"
     series, causality_graph = DataGenerator.finance(file, gt)
     n = int(0.8*len(series))
-    lstmTester = GVARTester(series[:n], cuda = False)
-    lstmTester2 = GVARTester(series[:n], cuda = False)
-    lstmTester.train()
+    lstmTester = TCDFTesterOrig(series[:n], cuda = True)
+    lstmTester2 = TCDFTester(series[:n], cuda = True)
+    #lstmTester.train()
     lstmTester2.trainInherit()
+    lstmTester.train()
     metrics = Metrics(lstmTester, causality_graph, series)
-    metrics.vis_pred(timepoints = 500)
+    metrics.vis_pred(start = n)
     metrics.vis_causal_graphs()
     metrics.prec_rec_acc_f1()
     
-    metrics = Metrics(lstmTester2, causality_graph, series)
-    metrics.vis_pred(timepoints = 500)
-    metrics.vis_causal_graphs()
-    metrics.prec_rec_acc_f1()
+    metrics2 = Metrics(lstmTester2, causality_graph, series)
+    metrics2.vis_pred(start=n)
+    metrics2.vis_causal_graphs()
+    metrics2.prec_rec_acc_f1()
+    
+    plt.plot(range(25), [i.cpu().detach().numpy() for i in lstmTester2.firstloss])
+    plt.plot(range(25), [i.cpu().detach().numpy() for i in lstmTester2.realloss])
+    plt.show()
     
     print("Done")

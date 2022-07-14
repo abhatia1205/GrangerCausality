@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 from sklearn.metrics import precision_score, recall_score, accuracy_score, f1_score, confusion_matrix
 from statsmodels.tsa.stattools import kpss, adfuller
 from statsmodels.stats.diagnostic import acorr_ljungbox
+import seaborn as sns
 
 class Metrics():
     
@@ -19,6 +20,7 @@ class Metrics():
         self.pred_graph, self.pred_timeseries = model.predict(timeseries)
         self.timeseries = timeseries
         self.error = timeseries - self.pred_timeseries
+        self.model_name = type(model).__name__
     
     def vis_causal_graphs(self):
         # Check learned Granger causality
@@ -39,6 +41,7 @@ class Metrics():
         axarr[0].set_yticks([])
         
         axarr[1].imshow(GC_est, cmap='Blues', vmin=0, vmax=1, extent=(0, len(GC_est), len(GC_est), 0))
+        axarr[0].set_title(self.model_name)
         axarr[1].set_ylabel('Affected series')
         axarr[1].set_xlabel('Causal series')
         axarr[1].set_xticks([])
@@ -54,9 +57,9 @@ class Metrics():
         plt.show()
         
     def vis_pred(self, start = 0, timepoints = -1):
-        timepoints = -1 if timepoints == -1 else min(timepoints, len(self.error))
-        pred = self.pred_timeseries[start:timepoints]
-        error = self.error[start:timepoints]
+        timepoints = -1 if timepoints == -1 else min(timepoints, len(self.error)-start)
+        pred = self.pred_timeseries[start:start+timepoints]
+        error = self.error[start:start+timepoints]
         fig, axarr = plt.subplots(3, 1, figsize=(10, 5))
         axarr[0].plot(pred+error)
         axarr[0].set_title('Actual timeseries')
@@ -111,8 +114,10 @@ class Metrics():
         recall = recall_score(y_true, y_pred)
         accuracy= accuracy_score(y_true, y_pred)
         f1 = f1_score(y_true, y_pred)
-        plt.plot(confusion_matrix(y_true, y_pred))
+        sns.heatmap(confusion_matrix(y_true, y_pred))
         plt.show()
+
+        print("Model: ", self.model_name)
         print("Preicison: {} \nRecall: {} \nAccuracy: {}\nF1 score: {}".format(precision, recall, accuracy, f1))
         return (precision, recall, accuracy,f1)
     
@@ -146,6 +151,10 @@ class Metrics():
         plt.legend( (bar1, bar2, bar3), ('ADF', 'KPSS', 'LBOX') )
         plt.show()
         return ret
+    
+    
+    def general_posthoc():
+        print("")
     
     
     
