@@ -149,24 +149,23 @@ class TCDFTester(ModelInterface):
             validated = copy.deepcopy(potentials)
             
             #Apply PIVM (permutes the values) to check if potential cause is true cause
-            for idx in potentials:
+            for pot in potentials:
                 random.seed(1111)
                 X_test2 = X_train.clone().cpu().numpy()
-                print(X_test2.shape, ": test hape")
-                random.shuffle(X_test2[:,idx,:][0])
+                random.shuffle(X_test2[:,pot,:][0])
                 shuffled = torch.from_numpy(X_test2)
                 if self.cuda:
                     shuffled=shuffled.cuda()
                 model.eval()
                 output = self.model.forward(shuffled)
-                testloss = F.mse_loss(output[:,:,idx], Y_train[:,:,idx], reduction='sum')
+                testloss = F.mse_loss(output[:,:,idx], Y_train[:,:,idx])
                 testloss = testloss.cpu().data.item()
                 self.testloss=testloss
                 diff = firstloss- realloss
                 testdiff = firstloss -testloss
                 significance = 0.8
                 if testdiff>(diff*significance): 
-                    validated.remove(idx)
+                    validated.remove(pot)
             
             return validated
         
@@ -208,7 +207,7 @@ class TCDFTesterOrig(ModelInterface):
         self.model = ConcatTCDF(self.num_vars, self.layers, self.kernel_size, self.cuda, self.kernel_size).cuda()
         self.parameters = self.model.parameters()
     
-    def findcauses2(self, x_train, target, epochs =500, 
+    def findcauses2(self, x_train, target, epochs =2000, 
                log_interval = 500, lr = 0.01, optimizername = "Adam", seed = 1111, significance = 0.8):
         """Discovers potential causes of one target time series, validates these potential causes with PIVM and discovers the corresponding time delays"""
     
@@ -217,8 +216,8 @@ class TCDFTesterOrig(ModelInterface):
         
         Y_train = np.expand_dims(x_train[:, target], 0).astype('float32') #get the time series for selected target
         X_train = np.copy(x_train)
-        X_train = np.vstack((np.zeros(self.num_vars), self.X[:-1, :]))
-        #X_train[:, target] = np.insert(X_train[:-1, target], 0, 0) #remove current info for time signal (lag x by 1)
+        #X_train = np.vstack((np.zeros(self.num_vars), self.X[:-1, :]))
+        X_train[:, target] = np.insert(X_train[:-1, target], 0, 0) #remove current info for time signal (lag x by 1)
         X_train = X_train.astype('float32').transpose()
         data_x = torch.from_numpy(X_train)
         data_y = torch.from_numpy(Y_train)

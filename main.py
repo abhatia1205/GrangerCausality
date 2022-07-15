@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+## -*- coding: utf-8 -*-
 """
 Created on Tue Jun 14 14:30:46 2022
 ddd
@@ -22,18 +22,18 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 if(__name__ == "__main__"):
-    lorenz_generator = DataGenerator(DataGenerator.lorenz96_func)
+    lorenz_generator = DataGenerator(DataGenerator.lotka_volterra)
     #series, causality_graph = lorenz_generator.create_series([[0.64994384, 0.01750787, 0.72402577, 0.14358566, 0.502893]], F = 8)
-    series, causality_graph = lorenz_generator.simulate(p=10, T=1000, args=(10,))
+    series, causality_graph = lorenz_generator.simulate(p=20, T=2000, args=(1.2,.2))
     file = "/home2/s215863/Desktop/Granger Causality/FinanceCPT/returns/random-rels_20_1_3_returns30007000.csv"
     gt = "/home2/s215863/Desktop/Granger Causality/FinanceCPT/relationships/random-rels_20_1_3.csv"
-    series, causality_graph = DataGenerator.finance(file, gt)
+    #series, causality_graph = DataGenerator.finance(file, gt)
     n = int(0.8*len(series))
-    lstmTester = TCDFTesterOrig(series[:n], cuda = True)
+    lstmTester = GVARTesterStable(series[:n], cuda = True)
     lstmTester2 = TCDFTester(series[:n], cuda = True)
     #lstmTester.train()
     lstmTester2.trainInherit()
-    lstmTester.train()
+    lstmTester.trainInherit()
     metrics = Metrics(lstmTester, causality_graph, series)
     metrics.vis_pred(start = n)
     metrics.vis_causal_graphs()
@@ -43,9 +43,6 @@ if(__name__ == "__main__"):
     metrics2.vis_pred(start=n)
     metrics2.vis_causal_graphs()
     metrics2.prec_rec_acc_f1()
-    
-    plt.plot(range(25), [i.cpu().detach().numpy() for i in lstmTester2.firstloss])
-    plt.plot(range(25), [i.cpu().detach().numpy() for i in lstmTester2.realloss])
-    plt.show()
+
     
     print("Done")

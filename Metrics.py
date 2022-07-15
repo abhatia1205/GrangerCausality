@@ -56,8 +56,8 @@ class Metrics():
         
         plt.show()
         
-    def vis_pred(self, start = 0, timepoints = -1):
-        timepoints = -1 if timepoints == -1 else min(timepoints, len(self.error)-start)
+    def vis_pred(self, start = 0, timepoints = 100):
+        timepoints =  min(timepoints, len(self.error)-start)
         pred = self.pred_timeseries[start:start+timepoints]
         error = self.error[start:start+timepoints]
         fig, axarr = plt.subplots(3, 1, figsize=(10, 5))

@@ -47,13 +47,24 @@ class DataGenerator():
 
     def lotka_volterra(x, t):
         N = len(x)
+        halfN = N//2
+        numcomp = 2
+        if((N/2) % numcomp != 0):
+            raise ValueError("Half of num variables must be multiple of num competitors")
         def gt():
-            return np.ones((N,N))
+            init = np.zeros((N,N))
+            for i in range(N):
+                init[i,i]=1
+                compstart = ((i//numcomp)*numcomp + halfN)%N
+                init[i,compstart:compstart+numcomp ] = 1
+            return init
         def funcint(x, t, *args):
-            coefs, K, r = args
+            alpha, beta = args
             d = np.zeros(N)
             for i in range(N):
-                d[i] = (1 - coefs[i].dot(x)/K[i])*r[i]*x[i]
+                compstart = ((i//numcomp)*numcomp + halfN)%N
+                comps = x[compstart:compstart+numcomp]
+                d[i] = alpha*x[i] - beta*x[i]*sum(comps) - alpha*(x[i]/200)**2
             return d
         return funcint, gt
     
@@ -97,7 +108,7 @@ class DataGenerator():
             np.random.seed(seed)
     
         # Use scipy to solve ODE.
-        x0 = np.random.normal(scale=0.01, size=p)
+        x0 = np.random.uniform(low = 1, high = 3, size=p)
         t = np.linspace(0, (T + burn_in) * delta_t, T + burn_in)
         funcint, ground_truth = self.func(x0,t)
         X = odeint(funcint, x0, t, args= args)
