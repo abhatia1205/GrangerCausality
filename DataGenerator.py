@@ -8,21 +8,23 @@ Created on Mon Jun 13 10:52:02 2022
 import numpy as np
 import random
 import matplotlib.pyplot as plt
-from scipy.integrate import odeint
+from scipy.integrate import odeint, solve_ivp
 import pandas as pd
 from GVAR.datasets.lotkaVolterra.multiple_lotka_volterra import MultiLotkaVolterra
 import math
 
 class DataGenerator():
     
-    def __init__(self, fun, data=None, perc = 0, **kwargs):
+    def __init__(self, fun, data=None, sigma = 0, **kwargs):
         self.func = fun
         self.kwargs = kwargs
         self.data = data
-        self.perc = perc
+        self.sigma = sigma
     
-    def noise(arr, perc):
-        noise = [num+ np.random.normal(0, num*perc, 1) for num in arr]
+    def noise(self,arr):
+        if(self.sigma == 0):
+            return arr
+        noise = arr+ np.random.normal(0, self.sigma, len(arr))
         return noise
 
     def lorenz96(x, t):
@@ -60,7 +62,7 @@ class DataGenerator():
             d[0] = alpha*(x[1] - h)
             d[1] = x[0] - x[1] + x[2]
             d[2] = -beta*x[1]
-            return noise(d)
+            return d
         return fun, gt
 
     def lotka_volterra(x, t):
@@ -88,41 +90,17 @@ class DataGenerator():
                 dx[i] = alpha*xi[i] - beta*xi[i]*sum(xcomps) - alpha*(xi[i]/200)**2
                 ycomps = xi[compstart:compstart+numcomp]
                 dy[i] = delta*yi[i]*sum(ycomps) - gamma*yi[i]
-            return noise(np.concatenate((dx, dy)))
+            return np.concatenate((dx, dy))
         return funcint, gt
-    
-    def create_series(self, initial, func = None, numSteps = 1000,dt = .01, **kwargs):
-        if(func == None):
-            func = self.func
-        order = len(initial)
         
-        initial = np.array(initial)
-        ground_truth = func(initial[-1*order:], ground_truth = True, **kwargs)
-        for i in range(numSteps):
-            xNew = initial[-1] + dt*np.array(func(initial[-1*order:], **kwargs))
-            initial = np.vstack([initial, xNew])
-        # = initial.transpose()
-        plt.plot(initial)
-        plt.show()
-        
-        self.data = initial
-        self.numVars = len(self.data[0])
-        self.seriesLength = len(self.data)
-        print("Created series: ", initial)
-        
-        return initial, ground_truth
-    
-    def add_gaussian_noise_post(self, perc, channels = None):
+    def add_gaussian_noise_post(data, perc, channels = None):
         if channels == None:
-            channels = range(self.numVars)
-        if self.data == None:
-            print("Data hasn't been instantiated yet")
-            return
-        retData = np.copy(self.data)
+            channels = range(len(data[0]))
+        retData = np.copy(data)
         size = len(retData)
-        sigma = [random.uniform(interval[0], interval[1]) for i in range(len(channels))]
+        sigma = np.std(retData, axis=0)
         for i, channel in enumerate(channels):
-            retData[:,channel] += np.random.normal(0, sigma[i], size = size)
+            retData[:,channel] += np.random.normal(0, sigma[i]*perc, size = size)
         return retData
     
     def simulate(self, p, T, delta_t=0.1, sd=0.1, burn_in=1000,
@@ -132,18 +110,24 @@ class DataGenerator():
         
         if(self.func.__name__ == "lotka_volterra"):
             alpha, beta, delta, gamma = args
-            gen = MultiLotkaVolterra(p=p//2, d=2, alpha=alpha, beta=beta, delta=delta, gamma=gamma)
+            gen = MultiLotkaVolterra(p=p//2, d=2, alpha=alpha, beta=beta, delta=delta, gamma=gamma, sigma=self.sigma)
             series, graph, _ = gen.simulate(int((T+burn_in)/delta_t), dt = delta_t)
             X = series[0]
             return X[burn_in:], graph
         # Use scipy to solve ODE.
         x0 = np.random.uniform(low = 10, high = 20, size=p)
         t = np.linspace(0, (T + burn_in) * delta_t, T + burn_in)
+        tf = (T + burn_in) * delta_t
         funcint, ground_truth = self.func(x0,t)
-        X = odeint(funcint, x0, t, args= args)
-        X += np.random.normal(scale=sd, size=(T + burn_in, p))
-    
-        return X[burn_in:], ground_truth()
+        def compose2(f, g):
+            return lambda *a, **kw: f(g(*a, **kw))
+        funcint2 = compose2(self.noise, funcint)
+        X = odeint(funcint2, x0, t, args= args)
+        def funcint3(x,t,*args):
+            return funcint2(t,x,*args)
+        X2 = solve_ivp(funcint3, (0, tf), x0, t_eval=t, args=args)['y']
+        #X += np.random.normal(scale=sd, size=(T + burn_in, p))
+        return X[burn_in:], np.transpose(X2)[burn_in:], ground_truth()
     
     def csv_to_graph(gtfile, N):
         """Collects the total delay of indirect causal relationships."""
@@ -162,6 +146,8 @@ class DataGenerator():
         x = pd.read_csv(file).values
         gt = DataGenerator.csv_to_graph(gtfile, x.shape[1])
         return x, gt
+
+
 
 if(__name__ == "__main__"):
     lorenz_generator = DataGenerator(DataGenerator.lorenz96_func)

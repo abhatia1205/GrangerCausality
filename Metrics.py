@@ -55,6 +55,7 @@ class Metrics():
                     axarr[1].add_patch(rect)
         
         plt.show()
+        plt.save_fig("trial.jpg")
         
     def vis_pred(self, start = 0, timepoints = 100):
         timepoints =  min(timepoints, len(self.error)-start)
@@ -64,7 +65,7 @@ class Metrics():
         axarr[0].plot(pred+error)
         axarr[0].set_title('Actual timeseries')
         axarr[1].plot(pred)
-        axarr[1].set_title('Predicted timeseries')
+        axarr[1].set_title('Predicted timeseries: ' + self.model_name)
         axarr[2].plot(error)
         axarr[2].set_title('Error timeseries')
         

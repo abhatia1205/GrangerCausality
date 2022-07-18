@@ -21,7 +21,7 @@ import torch.nn as nn
 class ConcatTCDF(nn.Module):
     def __init__(self, num_vars, layers, kernel_size, cuda, dilation_c):
         super().__init__()
-        self.networks = nn.ModuleList([ADDSTCN(target, num_vars, layers, kernel_size=kernel_size, cuda=cuda, dilation_c=dilation_c).cuda()
+        self.networks = nn.ModuleList([ADDSTCN(target, num_vars, layers, kernel_size=kernel_size, cuda=cuda, dilation_c=dilation_c)
                         for target in range(num_vars)])
         self.networks = self.networks.cuda() if cuda else self.networks
         
@@ -57,7 +57,8 @@ class TCDFTester(ModelInterface):
         self.dilation_c = self.kernel_size
         self.models = [ADDSTCN(target, self.num_vars, self.layers, kernel_size=self.kernel_size, cuda=self.cuda, dilation_c=self.dilation_c)
                        for target in range(self.num_vars)]
-        self.model = ConcatTCDF(self.num_vars, self.layers, self.kernel_size, self.cuda, self.kernel_size).cuda()
+        self.model = ConcatTCDF(self.num_vars, self.layers, self.kernel_size, self.cuda, self.kernel_size)
+        self.model = self.model.cuda() if cuda else self.model
         self.parameters = self.model.parameters()
     
     def _predict(self, x_test):
