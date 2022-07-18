@@ -22,15 +22,15 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 if(__name__ == "__main__"):
-    lorenz_generator = DataGenerator(DataGenerator.lotka_volterra)
+    lorenz_generator = DataGenerator(DataGenerator.chua)
     #series, causality_graph = lorenz_generator.create_series([[0.64994384, 0.01750787, 0.72402577, 0.14358566, 0.502893]], F = 8)
-    series, causality_graph = lorenz_generator.simulate(p=20, T=2000, args=(1.2,.2))
+    series, causality_graph = lorenz_generator.simulate(p=3, T=2000, args=(10.82, 13.286))
     file = "/home2/s215863/Desktop/Granger Causality/FinanceCPT/returns/random-rels_20_1_3_returns30007000.csv"
     gt = "/home2/s215863/Desktop/Granger Causality/FinanceCPT/relationships/random-rels_20_1_3.csv"
     #series, causality_graph = DataGenerator.finance(file, gt)
     n = int(0.8*len(series))
-    lstmTester = GVARTesterStable(series[:n], cuda = True)
-    lstmTester2 = TCDFTester(series[:n], cuda = True)
+    lstmTester = GVARTesterStable(series[:n], cuda = False)
+    lstmTester2 = TCDFTester(series[:n], cuda = False)
     #lstmTester.train()
     lstmTester2.trainInherit()
     lstmTester.trainInherit()

@@ -22,7 +22,8 @@ class ConcatTCDF(nn.Module):
     def __init__(self, num_vars, layers, kernel_size, cuda, dilation_c):
         super().__init__()
         self.networks = nn.ModuleList([ADDSTCN(target, num_vars, layers, kernel_size=kernel_size, cuda=cuda, dilation_c=dilation_c).cuda()
-                        for target in range(num_vars)]).cuda()
+                        for target in range(num_vars)])
+        self.networks = self.networks.cuda() if cuda else self.networks
         
     
     def forward(self, X):

@@ -10,15 +10,22 @@ import random
 import matplotlib.pyplot as plt
 from scipy.integrate import odeint
 import pandas as pd
+from GVAR.datasets.lotkaVolterra.multiple_lotka_volterra import MultiLotkaVolterra
+import math
 
 class DataGenerator():
     
-    def __init__(self, fun, data=None, **kwargs):
+    def __init__(self, fun, data=None, perc = 0, **kwargs):
         self.func = fun
         self.kwargs = kwargs
         self.data = data
+        self.perc = perc
+    
+    def noise(arr, perc):
+        noise = [num+ np.random.normal(0, num*perc, 1) for num in arr]
+        return noise
 
-    def lorenz96_func(x, t):
+    def lorenz96(x, t):
         p = len(x)
         def gt():
             GC = np.zeros((p, p), dtype=int)
@@ -37,13 +44,24 @@ class DataGenerator():
             return d
         return lorenz, gt
 
-    def generalized_lambda(self, x):
-        N = len(x)
-        d = np.zeros(N)
-        # Loops over indices (with operations and Python underflow indexing handling edge cases)
-        for i in range(N):
-            d[i] = self.func(x)
-        return d
+    def chua(x,t):
+        p = len(x)
+        assert p == 3
+        def gt():
+            return np.array([[1,1,0],
+                             [1,1,1],
+                             [1,1,1]])
+        def fun(x,t, *args):
+            d = np.zeros(p)
+            # Loops over indices (with operations and Python underflow indexing handling edge cases)
+            a,b,c, k = 1.3, .11, 7, 0
+            alpha, beta = args
+            h = -b*math.sin(math.pi*x[0]/(2*a) +k )
+            d[0] = alpha*(x[1] - h)
+            d[1] = x[0] - x[1] + x[2]
+            d[2] = -beta*x[1]
+            return noise(d)
+        return fun, gt
 
     def lotka_volterra(x, t):
         N = len(x)
@@ -59,13 +77,18 @@ class DataGenerator():
                 init[i,compstart:compstart+numcomp ] = 1
             return init
         def funcint(x, t, *args):
-            alpha, beta = args
-            d = np.zeros(N)
-            for i in range(N):
+            alpha, beta, delta, gamma = args
+            dx = np.zeros(halfN)
+            dy = np.zeros(halfN)
+            xi = x[:halfN]
+            yi = x[halfN:]
+            for i in range(halfN):
                 compstart = ((i//numcomp)*numcomp + halfN)%N
-                comps = x[compstart:compstart+numcomp]
-                d[i] = alpha*x[i] - beta*x[i]*sum(comps) - alpha*(x[i]/200)**2
-            return d
+                xcomps = yi[compstart:compstart+numcomp]
+                dx[i] = alpha*xi[i] - beta*xi[i]*sum(xcomps) - alpha*(xi[i]/200)**2
+                ycomps = xi[compstart:compstart+numcomp]
+                dy[i] = delta*yi[i]*sum(ycomps) - gamma*yi[i]
+            return noise(np.concatenate((dx, dy)))
         return funcint, gt
     
     def create_series(self, initial, func = None, numSteps = 1000,dt = .01, **kwargs):
@@ -89,7 +112,7 @@ class DataGenerator():
         
         return initial, ground_truth
     
-    def add_gaussian_noise(self, interval, channels = None):
+    def add_gaussian_noise_post(self, perc, channels = None):
         if channels == None:
             channels = range(self.numVars)
         if self.data == None:
@@ -106,9 +129,15 @@ class DataGenerator():
                        seed=0, args = ()):
         if seed is not None:
             np.random.seed(seed)
-    
+        
+        if(self.func.__name__ == "lotka_volterra"):
+            alpha, beta, delta, gamma = args
+            gen = MultiLotkaVolterra(p=p//2, d=2, alpha=alpha, beta=beta, delta=delta, gamma=gamma)
+            series, graph, _ = gen.simulate(int((T+burn_in)/delta_t), dt = delta_t)
+            X = series[0]
+            return X[burn_in:], graph
         # Use scipy to solve ODE.
-        x0 = np.random.uniform(low = 1, high = 3, size=p)
+        x0 = np.random.uniform(low = 10, high = 20, size=p)
         t = np.linspace(0, (T + burn_in) * delta_t, T + burn_in)
         funcint, ground_truth = self.func(x0,t)
         X = odeint(funcint, x0, t, args= args)
