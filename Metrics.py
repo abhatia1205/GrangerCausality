@@ -11,19 +11,23 @@ from sklearn.metrics import precision_score, recall_score, accuracy_score, f1_sc
 from statsmodels.tsa.stattools import kpss, adfuller
 from statsmodels.stats.diagnostic import acorr_ljungbox
 import seaborn as sns
+import os
 
 class Metrics():
     
-    def __init__(self, model, prediction_graph, timeseries, **kwargs):
+    def __init__(self, model, prediction_graph, timeseries, store_directory="trash", **kwargs):
         self.kwargs = kwargs
         self.graph = prediction_graph
         self.pred_graph, self.pred_timeseries = model.predict(timeseries)
         self.timeseries = timeseries
         self.error = timeseries - self.pred_timeseries
         self.model_name = type(model).__name__
+        self.directory = store_directory
     
     def vis_causal_graphs(self):
         # Check learned Granger causality
+        plt.matshow(self.pred_graph)
+        plt.show()
         GC_est = self.pred_graph
         GC = self.graph
         
@@ -54,8 +58,8 @@ class Metrics():
                     rect = plt.Rectangle((j, i-0.05), 1, 1, facecolor='none', edgecolor='red', linewidth=1)
                     axarr[1].add_patch(rect)
         
+        plt.savefig(os.path.join(self.directory,"causal_graph.jpg"))
         plt.show()
-        plt.save_fig("trial.jpg")
         
     def vis_pred(self, start = 0, timepoints = 100):
         timepoints =  min(timepoints, len(self.error)-start)
@@ -68,8 +72,9 @@ class Metrics():
         axarr[1].set_title('Predicted timeseries: ' + self.model_name)
         axarr[2].plot(error)
         axarr[2].set_title('Error timeseries')
-        
+        plt.savefig(os.path.join(self.directory, "pred_graph.jpg"))
         plt.show()
+        np.save(os.path.join(self.directory, "pred.npy"), self.pred_timeseries)
         
     def ApEn_series(U, m, r, **kwargs) -> float:
         """Approximate_entropy."""
@@ -120,6 +125,10 @@ class Metrics():
 
         print("Model: ", self.model_name)
         print("Preicison: {} \nRecall: {} \nAccuracy: {}\nF1 score: {}".format(precision, recall, accuracy, f1))
+        f = open(os.path.join(self.directory, "numerics.txt"), 'w')
+        f.write("Model: "+ self.model_name)
+        f.write("Preicison: {} \nRecall: {} \nAccuracy: {}\nF1 score: {}".format(precision, recall, accuracy, f1))
+        f.close()
         return (precision, recall, accuracy,f1)
     
     def error_stationarity(self):
@@ -151,8 +160,11 @@ class Metrics():
         plt.xticks(ind+width,["Series " + str(i+1) for i in range(N)])
         plt.legend( (bar1, bar2, bar3), ('ADF', 'KPSS', 'LBOX') )
         plt.show()
-        return ret
+        return ret, np.mean(ret, axis = 0)
     
+    def test(self, data=None):
+        pass
+        
     
     def general_posthoc():
         print("")

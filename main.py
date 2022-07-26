@@ -20,26 +20,29 @@ from cLSTMTester import cLSTMTester
 from TCDFTester import TCDFTester, TCDFTesterOrig
 import numpy as np
 import matplotlib.pyplot as plt
+from bayesianNetwork import BNTester
+
+
 
 if(__name__ == "__main__"):
     lorenz_generator = DataGenerator(DataGenerator.lorenz96)
     #series, causality_graph = lorenz_generator.create_series([[0.64994384, 0.01750787, 0.72402577, 0.14358566, 0.502893]], F = 8)
-    series, series2, causality_graph = lorenz_generator.simulate(p=5, T=200, args=(10,))#.82, 13.286))
+    series, series2, causality_graph = lorenz_generator.simulate(p=8, T=500, args=(10,))#.82, 13.286))
+    #_, series2, causality_graph = lorenz_generator.simulate(p=8, T=500, args= (10,))#82, 13.286))
     file = "/home2/s215863/Desktop/Granger Causality/FinanceCPT/returns/random-rels_20_1_3_returns30007000.csv"
     gt = "/home2/s215863/Desktop/Granger Causality/FinanceCPT/relationships/random-rels_20_1_3.csv"
     #series, causality_graph = DataGenerator.finance(file, gt)
     n = int(0.8*len(series))
-    lstmTester = GVARTesterStable(series[:n], cuda = False)
-    lstmTester2 = TCDFTester(series[:n], cuda = False)
-    #lstmTester.train()
-    lstmTester2.trainInherit()
-    lstmTester.trainInherit()
+    lstmTester = GVARTester(series[:n], cuda = True)
+    lstmTester2 = GVARTester(series2[:n], cuda = True)
+    lstmTester.train()
+    lstmTester2.train()
     metrics = Metrics(lstmTester, causality_graph, series)
     metrics.vis_pred(start = n)
     metrics.vis_causal_graphs()
     metrics.prec_rec_acc_f1()
     
-    metrics2 = Metrics(lstmTester2, causality_graph, series)
+    metrics2 = Metrics(lstmTester2, causality_graph, series2)
     metrics2.vis_pred(start=n)
     metrics2.vis_causal_graphs()
     metrics2.prec_rec_acc_f1()

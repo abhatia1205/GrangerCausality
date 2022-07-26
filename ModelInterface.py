@@ -9,15 +9,18 @@ import random
 import numpy as np
 import torch
 import torch.optim as optim
+import pickle
+import os
 
 class ModelInterface():
     
     def __init__(self, cuda):
         self.cuda = cuda
         self.lr = 0.05
-        self.NUM_EPOCHS = 50
+        self.NUM_EPOCHS = 500
         self.BATCH_SIZE = 32
         self.history = []
+        self.parameters = None
     def preprocess_data(self, X):
         pass
     
@@ -71,7 +74,7 @@ class ModelInterface():
         pass
     
     def posttrain_procedure(self):
-        pass
+        torch.cuda.empty_cache()
     
     def make_GC_graph(self):
         pass
@@ -83,3 +86,16 @@ class ModelInterface():
         pred_series = self._predict(x_test)
         graph = self.make_GC_graph()
         return graph, pred_series
+    
+    def save(self, directory):
+        f = open(os.path.join(directory, type(self).__name__+".pkl"), "wb")
+        new_dict = self.__dict__.copy()
+        new_dict.pop("parameters")
+        pickle.dump(new_dict, f)
+        f.close()
+    
+    def load(self, d):
+        s = os.path.join(d, type(self).__name__+".pkl")
+        with open(s, 'rb') as file:
+            new_dict = pickle.load(file)
+            self.__dict__.update(new_dict)

@@ -17,6 +17,7 @@ from torch.nn import MSELoss
 from torch.autograd import Variable
 from sklearn.metrics import balanced_accuracy_score
 import matplotlib.pyplot as plt
+import os
 
 
 class GVARTester(ModelInterface):
@@ -38,7 +39,7 @@ class GVARTester(ModelInterface):
         self.alpha = 0.5
         self.parameters = self.senn.parameters()
         
-    def train(self, end_epoch: int = 40, batch_size: int = 4, lmbd: float = 0.1,
+    def train(self, end_epoch: int = 1000, batch_size: int = 64, lmbd: float = 0.1,
                        gamma: float = 0.1, seed=42,  initial_learning_rate=0.001, beta_1=0.9,
                        beta_2=0.999, use_cuda=True, verbose=True, test_data=None):
         self.graph_est, _ =  training_procedure_stable(self.X, self.order, self.layer_size, end_epoch, batch_size, lmbd, gamma, display=True, verbose = 1)
@@ -279,3 +280,16 @@ class GVARTesterStable(ModelInterface):
         
 
         return causal_estimate, total_loss, history
+    
+    def save(self, directory):
+        f = open(os.path.join(directory, "gvar_model.pt"), "wb")
+        torch.save(self.senn3.state_dict(), os.path.join(directory, "gvar_model.pt"))
+        super(GVARTesterStable, self).save(directory)
+        f.close()
+    
+    def load(self, d):
+        super(GVARTesterStable, self).load(d)
+        self.senn3.load_state_dict(torch.load(os.path.join(d, "gvar_model.pt")))
+        self.parameters = self.senn3.parameters()
+        
+    

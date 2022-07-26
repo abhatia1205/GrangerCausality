@@ -10,6 +10,7 @@ from NeuralGC.models.clstm import cLSTM, train_model_ista, arrange_input, regula
 import torch
 import numpy as np
 import torch.nn as nn
+import os
 
 
 class cLSTMTester(ModelInterface):
@@ -24,6 +25,7 @@ class cLSTMTester(ModelInterface):
         self.numVars = self.X.shape[2]
         self.clstm = cLSTM(X.shape[-1], hidden = 100)
         self.clstm = self.clstm.cuda(self.device) if cuda else self.clstm
+        
         self.parameters = self.clstm.parameters()
         
         self.context = 10
@@ -92,6 +94,16 @@ class cLSTMTester(ModelInterface):
     def make_causal_estimate(self):
         return self.clstm.GC().cpu().data.numpy()
     
+    def save(self, directory):
+        f = open(os.path.join(directory, "clstm_model.pt"), "wb")
+        torch.save(self.clstm.state_dict(), os.path.join(directory, "clstm_model.pt"))
+        super(cLSTMTester, self).save(directory)
+        f.close()
+    
+    def load(self, d):
+        super(cLSTMTester, self).load(d)
+        self.clstm.load_state_dict(torch.load(os.path.join(d, "clstm_model.pt")))
+        self.parameters = self.clstm.parameters()
         
         
         

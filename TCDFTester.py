@@ -17,6 +17,8 @@ from TCDF.model import ADDSTCN
 import copy
 import torch.nn.functional as F
 import torch.nn as nn
+import os
+import pickle
 
 class ConcatTCDF(nn.Module):
     def __init__(self, num_vars, layers, kernel_size, cuda, dilation_c):
@@ -186,6 +188,18 @@ class TCDFTester(ModelInterface):
     
     def make_GC_graph(self):
         return self.pred_graph
+    
+    def save(self, directory):
+        f = open(os.path.join(directory, "tcdf_model.pt"), "wb")
+        torch.save(self.model.state_dict(), os.path.join(directory, "tcdf_model.pt"))
+        super(TCDFTester, self).save(directory)
+        f.close()
+    
+    def load(self, d):
+        super(TCDFTester, self).load(d)
+        self.model.load_state_dict(torch.load(os.path.join(d, "tcdf_model.pt")))
+        self.parameters = self.model.parameters()
+        
         
 
 class TCDFTesterOrig(ModelInterface):
