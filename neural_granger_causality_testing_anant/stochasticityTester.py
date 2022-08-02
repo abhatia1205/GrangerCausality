@@ -95,7 +95,6 @@ def make_numvar_graph(sigma = None, func = None, graphName = None):
     directories = [make_directory(name = func, sigma=sigma, numvars=numvar) + "/" +model +"/unseen"
                    for sigma in sigmas for model in models for func in funcs for numvar in numvars]
     gens = {directory:parseNumerics(directory) for directory in directories}
-    
     for sigma in sigmas:
         for func in funcs:
             for graphName in losses:

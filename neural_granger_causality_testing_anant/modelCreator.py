@@ -48,7 +48,7 @@ if(__name__ == "__main__"):
                 graph = np.load(os.path.join(base_dir, "causal_graph.npy"))
                 n = 5000
                 #models = [GVARTesterTRGC(series[:n], cuda = True), TCDFTester(series[:n], cuda = True), cLSTMTester(series[:n], cuda=True)]
-                models = [GVARTesterTRGC(series[:n], cuda = True)]
+                models = [BNTester(series[:n], cuda = True)]
                 while(len(models) > 0):
                     model = models[0]
                     directory = os.path.join(base_dir, type(model).__name__+"2")

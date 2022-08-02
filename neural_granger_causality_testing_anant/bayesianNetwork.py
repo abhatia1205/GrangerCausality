@@ -164,7 +164,7 @@ class BNTester(ModelInterface):
         base_loss = sum([F.mse_loss(pred[:,i], targets[:,i]) for i in range(self.numVars)])
         return base_loss
     
-    def make_GC_graph(self, x, plotSwitch = True, q = 0.5):
+    def make_GC_graph(self, x, plotSwitch = False, q = 0.5):
         if(self.graph_est_done):
             return self.graph_est
         def plot(truth, title):
@@ -210,7 +210,7 @@ class BNTester(ModelInterface):
                 prediction = np.mean(np.std(prediction, axis=0), axis=0)
                 permuted_means.append((prediction-truth)/truth)
             self.true_graph = np.abs(np.array(permuted_means))
-            mean = np.quantile(self.true_graph, q)
+            mean = np.mean(self.true_graph)
             self.graph_est = (self.true_graph >= mean)*1.0
             self.graph_est.transpose()
             self.graph_est_done = True
@@ -237,7 +237,6 @@ class BNTester(ModelInterface):
     
     def ttest_threshold_mean(truth, permuted, num_obs=50):
         truth_mean, truth_std = truth[0], truth[1]
-        print(permuted, permuted.shape)
         permuted_mean = permuted[:,0,:]
         permuted_std = permuted[:,1,:]
         true_graph = np.zeros((len(truth_mean), len(truth_mean)))
@@ -252,7 +251,6 @@ class BNTester(ModelInterface):
     
     def ttest_threshold_005(truth, permuted, num_obs=50):
         truth_mean, truth_std = truth[0], truth[1]
-        print(permuted, permuted.shape)
         permuted_mean = permuted[:,0,:]
         permuted_std = permuted[:,1,:]
         true_graph = np.zeros((len(truth_mean), len(truth_mean)))
@@ -317,7 +315,8 @@ class BNTester(ModelInterface):
         
     
     def make_causal_estimate(self):
-        self.make_GC_graph(self.X)
+        return np.ones((self.numVars, self.numVars))
+        #self.make_GC_graph(self.X)
     
     def predict(self, x_test):
         pred_series = self._predict(x_test)
@@ -326,20 +325,26 @@ class BNTester(ModelInterface):
 
 
 if(__name__ == "__main__"):
-    lorenz_generator = DataGenerator(DataGenerator.lorenz96)
+    lorenz_generator = DataGenerator(DataGenerator.lotka_volterra)
     #series, causality_graph = lorenz_generator.create_series([[0.64994384, 0.01750787, 0.72402577, 0.14358566, 0.502893]], F = 8)
-    series, causality_graph = lorenz_generator.integrate(p=12, T=3000, args=(10,))
+    series, causality_graph = lorenz_generator.integrate(p=12, T=3000, args=(1.2,.2,0.05,1.1))
     #_, series2, causality_graph = lorenz_generator.simulate(p=8, T=500, args= (10,))#82, 13.286))
     file = "/home2/s215863/Desktop/Granger Causality/FinanceCPT/returns/random-rels_20_1_3_returns30007000.csv"
     gt = "/home2/s215863/Desktop/Granger Causality/FinanceCPT/relationships/random-rels_20_1_3.csv"
     #series, causality_graph = DataGenerator.finance(file, gt)
+    torch.cuda.empty_cache()
+    gc.collect()
     n = int(0.8*len(series))
     lstmTester = BNTester(series[:n], cuda = True)
     lstmTester.NUM_EPOCHS = 1000
     lstmTester.trainInherit()
+    torch.cuda.empty_cache()
+    gc.collect()
     metrics = Metrics(lstmTester, causality_graph, series)
     metrics.vis_pred(start = n)
     metrics.vis_causal_graphs()
+    torch.cuda.empty_cache()
+    gc.collect()
     
     funcs = [(BNTester.E_n_Var_t, BNTester.mean_threshold),
              (BNTester.E_t_Var_n, BNTester.mean_threshold),
@@ -353,6 +358,8 @@ if(__name__ == "__main__"):
         print(a.__name__, b.__name__)
         metrics.vis_causal_graphs()
         metrics.prec_rec_acc_f1()
+        torch.cuda.empty_cache()
+        gc.collect()
     
     # lstmTester2 = GVARTesterTRGC(series[:n], cuda = True)
     # lstmTester2.NUM_EPOCHS = 500

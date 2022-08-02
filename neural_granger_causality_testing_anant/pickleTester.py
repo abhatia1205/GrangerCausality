@@ -89,11 +89,11 @@ def test2():
                 series = np.load(os.path.join(base_dir, s+"_base_2.npy"))
                 graph = np.load(os.path.join(base_dir, "causal_graph.npy"))
                 n = 5000
-                models = [BNTester(series[:n], cuda=True)]
+                models = [GVARTesterTRGC(series[:n], cuda=True)]
                 #models = [GVARTesterTRGC(series[:n], cuda = True), TCDFTester(series[:n], cuda = True), cLSTMTester(series[:n], cuda=True)]
                 while(len(models) > 0):
                     model = models[0]
-                    directory = os.path.join(base_dir, type(model).__name__)
+                    directory = os.path.join(base_dir, type(model).__name__)+"2"
                     try:
                         model.load(directory)
                     except:
@@ -113,4 +113,4 @@ def test2():
 
 
 if(__name__ == "__main__"):
-    verifyNewModels(1550)
+    test2()
