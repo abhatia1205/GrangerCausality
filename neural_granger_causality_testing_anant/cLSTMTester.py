@@ -6,7 +6,7 @@ Created on Mon Jun 13 14:59:52 2022
 """
 
 from ModelInterface import ModelInterface
-from NeuralGC.models.clstm import cLSTM, train_model_ista, arrange_input, regularize, ridge_regularize, prox_update
+from NeuralGC.models.clstm import cLSTM,train_model_gista, train_model_ista, arrange_input, regularize, ridge_regularize, prox_update
 import torch
 import numpy as np
 import torch.nn as nn
@@ -15,7 +15,7 @@ import os
 
 class cLSTMTester(ModelInterface):
     
-    def __init__(self, X, cuda = False):
+    def __init__(self, X, cuda = False, lam = 0.1, lam_ridge = 0.1, hidden=100, lr = 0.01):
         
         super(cLSTMTester, self).__init__(cuda)
         self.device = torch.device('cuda') if cuda else torch.device('cpu')
@@ -23,30 +23,30 @@ class cLSTMTester(ModelInterface):
         self.X = torch.tensor(X[np.newaxis], dtype=torch.float32, device=self.device)
         self.X = self.X.cuda() if cuda else self.X
         self.numVars = self.X.shape[2]
-        self.clstm = cLSTM(X.shape[-1], hidden = 100)
+        self.clstm = cLSTM(X.shape[-1], hidden = hidden)
         self.clstm = self.clstm.cuda(self.device) if cuda else self.clstm
         
         self.parameters = self.clstm.parameters()
         
         self.context = 10
         self.base_loss = nn.MSELoss(reduction='mean')
-        self.lam = 0
-        self.lam_ridge = 0
+        self.lam = lam
+        self.lam_ridge = lam_ridge
+        self.lr = lr
     
-    def train(self, max_iter = 4000):
-        train_model_ista( self.clstm, self.X, context=10, lam=10.0, lam_ridge=1e-2, lr=1e-3, max_iter=max_iter,
-    check_every=50, verbose =1)
+    def train(self, max_iter = 2000):
+        train_model_gista( self.clstm, self.X, context=10, lam=self.lam, lam_ridge=self.lam_ridge, lr=self.lr, max_iter=max_iter,
+    check_every=50, verbose =0)
     
     def make_GC_graph(self):
         return self.clstm.GC().cpu().data.numpy()
     
     def _predict(self, x_test, context = 10):
+        self.clstm.eval()
         origX = np.copy(x_test)
         origX = torch.tensor(origX[np.newaxis], dtype=torch.float32, device=self.device)
         X, Y = zip(*[arrange_input(x, context) for x in origX])
-        print("Shape is: ", X)
         X = torch.cat(X, dim=0)
-        print("Shape is: ", X.shape)
         Y = torch.cat(Y, dim=0)
         
         if self.cuda:

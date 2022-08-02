@@ -9,7 +9,7 @@ from ModelInterface import ModelInterface
 import torch
 import numpy as np
 from GVAR.sennmodels.senn import SENNGC
-from GVAR.training import training_procedure_stable
+from GVAR.training import training_procedure_stable, training_procedure_trgc
 from GVAR.utils import construct_training_dataset
 import random
 import torch.optim as optim
@@ -39,10 +39,11 @@ class GVARTester(ModelInterface):
         self.alpha = 0.5
         self.parameters = self.senn.parameters()
         
-    def train(self, end_epoch: int = 1000, batch_size: int = 64, lmbd: float = 0.1,
+    def train(self, end_epoch: int = 200, batch_size: int = 64, lmbd: float = 0.1,
                        gamma: float = 0.1, seed=42,  initial_learning_rate=0.001, beta_1=0.9,
                        beta_2=0.999, use_cuda=True, verbose=True, test_data=None):
-        self.graph_est, _ =  training_procedure_stable(self.X, self.order, self.layer_size, end_epoch, batch_size, lmbd, gamma, display=True, verbose = 1)
+        #self.graph_est, _ =  training_procedure_stable(self.X, self.order, self.layer_size, end_epoch, batch_size, lmbd, gamma, display=True, verbose = 1)
+        self.graph_est, _, __ =  training_procedure_trgc(self.X, self.order, self.layer_size, end_epoch, batch_size, lmbd, gamma, display=True, verbose = 1)
     
     
     def make_GC_graph(self):
@@ -149,7 +150,7 @@ class GVARTesterStable(ModelInterface):
         print(self.device)
 
         # Get the forecasts and generalised coefficients
-        preds, coeffs = self.senn(inputs=inputs)
+        preds, coeffs = self.senn3(inputs=inputs)
         preds = preds.cpu().detach().numpy() if self.cuda else preds.detach().numpy()
         return np.concatenate((x_test[:self.order, :], preds), axis=0)
     
@@ -237,7 +238,8 @@ class GVARTesterStable(ModelInterface):
         print("Causal struct estimate: ", causal_struct_estimate)
         self.graph_est =  causal_struct_estimate
         return causal_struct_estimate
-    
+
+
     def closure(self,  x, y, senn, **kwargs):
         opt = kwargs["opt"]
         opt.zero_grad()

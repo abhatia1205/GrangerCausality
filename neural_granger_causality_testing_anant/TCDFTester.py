@@ -64,13 +64,13 @@ class TCDFTester(ModelInterface):
         self.parameters = self.model.parameters()
     
     def _predict(self, x_test):
+        self.model.eval()
         x_test = x_test.astype('float32').transpose()
         data_x = torch.from_numpy(x_test)
         x_test = Variable(data_x).cuda(device = self.device ) if self.cuda else Variable(data_x)
         x_test = x_test.unsqueeze(0).contiguous() #batch size 1
         #pred = np.array([ np.squeeze(model.forward(x_test).cpu().detach().numpy()) for model in self.models])
         pred = np.squeeze(self.model.forward(x_test).cpu().detach().numpy())
-        print("Pred: ", pred, pred.shape)
         return pred
     
     def preprocess_data(self):

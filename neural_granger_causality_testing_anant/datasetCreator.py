@@ -12,7 +12,7 @@ import os
 def make_directory(name = None, sigma = None, numvars = None):
     if(name == None or sigma == None or numvars == None):
         raise ValueError("Inputs must be not none")
-    base_dir = "data/{}/{}/{}".format(name, numvars,sigma)
+    base_dir = "data2/{}/{}/{}".format(name, numvars,sigma)
     if(not os.path.isdir(base_dir)):
         os.makedirs(base_dir)
     return base_dir
@@ -21,22 +21,28 @@ def make_directory(name = None, sigma = None, numvars = None):
 if(__name__ == "__main__"):
     base_dir = "data"
     #try: 
-    for sigma in [0, 0.05, 0.1, 0.25, 0.5, 1, 2, 5, 10]:
-        funcs = [DataGenerator.lorenz96, DataGenerator.lotka_volterra, DataGenerator.chua]
-        arguments = [(10,), (1.2, 0.2, 0.05, 1.1), (10.82, 14.286)]
+    for sigma in [0.05, 0.1, 0.25, 0.5, 1, 2, 5, 10]:
+        funcs = [DataGenerator.lorenz96, DataGenerator.chua]
+        arguments = [(10,), (10.82, 14.286)]
         for fun, args in zip(funcs, arguments):
             generator = DataGenerator(fun, sigma = sigma)
+            chua_done = False
             for p in [8, 12, 20, 48]:
-                if(fun == DataGenerator.chua):
+                if(fun == DataGenerator.chua and chua_done):
+                    continue
+                elif(fun == DataGenerator.chua):
                     p = 3
-                for i in range(5):
-                    series_rk4, graph = generator.simulate(p=p, burn_in=500, T=10000, args=args)
+                    chua_done = True
+                for i in range(3):
+                    #series_rk4, graph = generator.simulate(p=p, burn_in=500, T=10000, args=args)
+                    series_ito, graph = generator.integrate(p=p, burn_in=500, T=10000, args=args)
                     # plt.matshow(graph)
                     # plt.plot(series_lsoda)
                     # plt.show()
                     base_dir = make_directory(name = fun.__name__, sigma = sigma, numvars = p)
-                    np.save(os.path.join(base_dir, "rk4_base_{}.npy".format(i)), series_rk4)
+                    np.save(os.path.join(base_dir, "ito_base_{}.npy".format(i)), series_ito)
                     np.save(os.path.join(base_dir, "causal_graph.npy"), graph)
+                print(base_dir)
     
     file = "/home2/s215863/Desktop/Granger Causality/FinanceCPT/returns/random-rels_20_1_3_returns30007000.csv"
     gt = "/home2/s215863/Desktop/Granger Causality/FinanceCPT/relationships/random-rels_20_1_3.csv"

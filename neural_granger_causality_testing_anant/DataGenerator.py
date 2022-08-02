@@ -12,6 +12,7 @@ from scipy.integrate import odeint, solve_ivp
 import pandas as pd
 from GVAR.datasets.lotkaVolterra.multiple_lotka_volterra import MultiLotkaVolterra
 import math
+import sdeint
 
 class DataGenerator():
     
@@ -29,6 +30,7 @@ class DataGenerator():
 
     def lorenz96(x, t):
         p = len(x)
+        globF = 10
         def gt():
             GC = np.zeros((p, p), dtype=int)
             for i in range(p):
@@ -41,8 +43,9 @@ class DataGenerator():
         def lorenz(x,t, *args):
             d = np.zeros(p)
             # Loops over indices (with operations and Python underflow indexing handling edge cases)
+            F = args[0] if len(args) > 0 else globF
             for i in range(p):
-                d[i] = (x[(i + 1) % p] - x[i - 2]) * x[i - 1] - x[i] + args[0]
+                d[i] = (x[(i + 1) % p] - x[i - 2]) * x[i - 1] - x[i] + F
             return d
         return lorenz, gt
 
@@ -57,7 +60,7 @@ class DataGenerator():
             d = np.zeros(p)
             # Loops over indices (with operations and Python underflow indexing handling edge cases)
             a,b,c, k = 1.3, .11, 7, 0
-            alpha, beta = args
+            alpha, beta = args if len(args) > 0 else 10.82, 14.286
             h = -b*math.sin(math.pi*x[0]/(2*a) +k )
             d[0] = alpha*(x[1] - h)
             d[1] = x[0] - x[1] + x[2]
@@ -103,7 +106,12 @@ class DataGenerator():
             retData[:,channel] += np.random.normal(0, sigma[i]*perc, size = size)
         return retData
     
-    def simulate(self, p, T, delta_t=0.1, sd=0.1, burn_in=1000,
+    def normalize(data):
+        m = np.mean(data, axis = 0)
+        s = np.std(data, axis=0)
+        return (data-m)/s
+    
+    def integrate(self, p, T, delta_t=0.01, sd=0.1, burn_in=1000,
                        seed=0, args = ()):
         if seed is not None:
             np.random.seed(seed)
@@ -112,22 +120,39 @@ class DataGenerator():
             alpha, beta, delta, gamma = args
             gen = MultiLotkaVolterra(p=p//2, d=2, alpha=alpha, beta=beta, delta=delta, gamma=gamma, sigma=self.sigma)
             series, graph, _ = gen.simulate(int((T+burn_in)/delta_t), dt = delta_t)
-            X = series[0]
+            X = series[0] 
             return X[burn_in:], graph
         # Use scipy to solve ODE.
-        x0 = np.random.uniform(low = 10, high = 20, size=p)
+        x0 = np.random.uniform(low = -0.1, high = 0.1, size=p) + args[0]
+        t = np.linspace(0, (T + burn_in) * delta_t, T + burn_in)
+        funcint, ground_truth = self.func(x0,t)
+        def noisearr(x,t,*args):
+            return np.diag(self.sigma*np.ones(p))
+        X = sdeint.itoint(funcint, noisearr, x0, t)
+        X = DataGenerator.normalize(X)
+        return X[burn_in:], ground_truth()
+    
+    def simulate(self, p, T, delta_t=0.01, sd=0.1, burn_in=1000,
+                       seed=0, args = ()):
+        if seed is not None:
+            np.random.seed(seed)
+        
+        if(self.func.__name__ == "lotka_volterra"):
+            alpha, beta, delta, gamma = args
+            gen = MultiLotkaVolterra(p=p//2, d=2, alpha=alpha, beta=beta, delta=delta, gamma=gamma, sigma=self.sigma)
+            series, graph, _ = gen.simulate(int((T+burn_in)/delta_t), dt = delta_t)
+            X = series[0] 
+            return X[burn_in:], graph
+        # Use scipy to solve ODE.
+        x0 = np.random.uniform(low = -0.1, high = 0.1, size=p) + args[0]
         t = np.linspace(0, (T + burn_in) * delta_t, T + burn_in)
         tf = (T + burn_in) * delta_t
         funcint, ground_truth = self.func(x0,t)
-        def compose2(f, g):
-            return lambda *a, **kw: f(g(*a, **kw))
-        funcint2 = compose2(self.noise, funcint)
-        X = odeint(funcint2, x0, t, args= args)
-        def funcint3(x,t,*args):
-            return funcint2(t,x,*args)
-        X2 = solve_ivp(funcint3, (0, tf), x0, t_eval=t, args=args)['y']
+        X = odeint(funcint, x0, t, args= args)
+        #X2 = np.transpose(solve_ivp(funcint3, (0, tf), x0, t_eval=t, args=args)['y'])
         #X += np.random.normal(scale=sd, size=(T + burn_in, p))
-        return X[burn_in:], np.transpose(X2)[burn_in:], ground_truth()
+        #X = DataGenerator.normalize(X)
+        return X[burn_in:], ground_truth()
     
     def csv_to_graph(gtfile, N):
         """Collects the total delay of indirect causal relationships."""

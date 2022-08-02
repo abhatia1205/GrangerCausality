@@ -12,10 +12,11 @@ from statsmodels.tsa.stattools import kpss, adfuller
 from statsmodels.stats.diagnostic import acorr_ljungbox
 import seaborn as sns
 import os
+from torch.nn import MSELoss
 
 class Metrics():
     
-    def __init__(self, model, prediction_graph, timeseries, store_directory="trash", **kwargs):
+    def __init__(self, model, prediction_graph, timeseries, store_directory="trash",**kwargs):
         self.kwargs = kwargs
         self.graph = prediction_graph
         self.pred_graph, self.pred_timeseries = model.predict(timeseries)
@@ -23,7 +24,8 @@ class Metrics():
         self.error = timeseries - self.pred_timeseries
         self.model_name = type(model).__name__
         self.directory = store_directory
-    
+        if(not os.path.isdir(store_directory)):
+            os.makedirs(store_directory)
     def vis_causal_graphs(self):
         # Check learned Granger causality
         plt.matshow(self.pred_graph)
@@ -124,10 +126,10 @@ class Metrics():
         plt.show()
 
         print("Model: ", self.model_name)
-        print("Preicison: {} \nRecall: {} \nAccuracy: {}\nF1 score: {}".format(precision, recall, accuracy, f1))
+        print("Preicison: {} \nRecall: {} \nAccuracy: {}\nF1 score: {}\n".format(precision, recall, accuracy, f1))
         f = open(os.path.join(self.directory, "numerics.txt"), 'w')
-        f.write("Model: "+ self.model_name)
-        f.write("Preicison: {} \nRecall: {} \nAccuracy: {}\nF1 score: {}".format(precision, recall, accuracy, f1))
+        f.write("Model: "+ self.model_name+"\n")
+        f.write("Preicison: {} \nRecall: {} \nAccuracy: {}\nF1 score: {}\n".format(precision, recall, accuracy, f1))
         f.close()
         return (precision, recall, accuracy,f1)
     
@@ -137,37 +139,59 @@ class Metrics():
         for series in error_mat:
             adf_p = adfuller(series)[1]
             kpss_p = kpss(series)[1]
-            lbox_p = max(acorr_ljungbox(series)["lb_pvalue"])
+            lbox_p = max(abs(acorr_ljungbox(series)["lb_pvalue"]))
             ret.append([adf_p, kpss_p, lbox_p])
         N = len(error_mat)
         ind = np.arange(N) 
         width = 0.25
         ret = np.array(ret)
+        
+        def plot(data, testname):
+            ind = np.arange(N)
+            bar1 = plt.bar(ind, data, width, color = 'r')
+            plt.xlabel("Time series")
+            plt.ylabel('P values')
+            plt.title(testname+  "P value visualization")
+              
+            plt.xticks(ind+width,[str(i+1) for i in range(N)])
+            plt.show()
           
         adf = ret[:, 0]
-        bar1 = plt.bar(ind, adf, width, color = 'r')
-          
+        plot(adf, "ADF")
         kps = ret[:, 1]
-        bar2 = plt.bar(ind+width, kps, width, color='g')
-          
+        plot(kps, "KPSS")
         lbox = ret[:, 2]
-        bar3 = plt.bar(ind+width*2, lbox, width, color = 'b')
-          
-        plt.xlabel("Time series")
-        plt.ylabel('P values')
-        plt.title("P value visualization")
-          
-        plt.xticks(ind+width,["Series " + str(i+1) for i in range(N)])
-        plt.legend( (bar1, bar2, bar3), ('ADF', 'KPSS', 'LBOX') )
-        plt.show()
-        return ret, np.mean(ret, axis = 0)
+        plot(lbox, "Ljung Box")
+        f = open(os.path.join(self.directory, "numerics.txt"), 'a')
+        mean_arr = np.mean(ret, axis=0)
+        f.write("ADF Pval: {} \nKPSS Pval: {} \nLBox Pval: {}\n".format(mean_arr[0], mean_arr[1], mean_arr[2]))
+        f.close()
+        return ret, mean_arr
     
-    def test(self, data=None):
-        pass
+    def error_variance(self):
+        arr = np.std(self.error, axis=0)
+        orig_std = np.std(self.timeseries, axis=0)
+        print("Error std: ", arr)
+        print("Percentage std to orig: ", arr/orig_std)
+        f = open(os.path.join(self.directory, "numerics.txt"), 'a')
+        f.write("Error std: {}\n".format(arr))
+        f.write("Percentage std to orig: {}\n".format(arr/orig_std))
         
+        loss = np.sum(self.error**2, axis=0)
+        print("MSE Loss from orig: {}".format(loss))
+        print("PErcentage MSE from orig: {}".format(loss/(np.sum(self.timeseries, axis=0))))
+        f.write("MSE Loss from orig: {}\n".format(loss))
+        f.write("PErcentage MSE from orig: {}\n".format(loss/(np.sum(self.timeseries, axis=0))))
+        f.close()
+        return arr
     
-    def general_posthoc():
-        print("")
+    def test(self, data=None, **kwargs):
+        self.vis_causal_graphs()
+        self.vis_pred(**kwargs)
+        self.prec_rec_acc_f1()
+        self.error_variance()
+        self.error_stationarity()
+
     
     
     
