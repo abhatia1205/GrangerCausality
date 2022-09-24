@@ -31,8 +31,12 @@ import gc
 def get_finance_data():
     base_dir = "/home2/s215863/Desktop/Granger Causality/FinanceCPT/returns/"
     gt_base = "/home2/s215863/Desktop/Granger Causality/FinanceCPT/relationships"
+    i = 0
     for fname in os.listdir(base_dir):
         if( "random-rels" in fname and  fname.index("random-rels") == 0):
+            i+=1
+            if(i < 2):
+                continue
             file = os.path.join(base_dir, fname)
             corres_index = fname.index("_returns")
             gt_suff = fname[:corres_index]+".csv"
@@ -50,9 +54,10 @@ if(__name__ == "__main__"):
     for series, graph, dir_name in gen:
         base_dir = os.path.join(finance_dir, dir_name)
         n = int(0.8*len(series))
-        models = [BNTester(series[:n], cuda = True),GVARTesterTRGC(series[:n], cuda = True), TCDFTester(series[:n], cuda = True), cLSTMTester(series[:n], cuda=True)]
+        models = [BNTester(series[:n], large=True, cuda = True),GVARTesterTRGC(series[:n], cuda = True), TCDFTester(series[:n], cuda = True), cLSTMTester(series[:n], cuda=True)]
         while(len(models) > 0):
             model = models[0]
+            model.NUM_EPOCHS = 3000
             directory = os.path.join(base_dir, type(model).__name__)
             if(not os.path.isdir(directory)):
                 os.makedirs(directory)

@@ -43,7 +43,7 @@ class ConcatTCDF(nn.Module):
 
 class TCDFTester(ModelInterface):
     
-    def __init__(self, X, cuda = False):
+    def __init__(self, X, cuda = False, significance = 0.8):
         
         super(TCDFTester, self).__init__(cuda)
         self.X = X
@@ -56,6 +56,7 @@ class TCDFTester(ModelInterface):
         
         self.kernel_size = 5
         self.layers = 3
+        self.significance = significance
         self.dilation_c = self.kernel_size
         self.models = [ADDSTCN(target, self.num_vars, self.layers, kernel_size=self.kernel_size, cuda=self.cuda, dilation_c=self.dilation_c)
                        for target in range(self.num_vars)]
@@ -167,7 +168,7 @@ class TCDFTester(ModelInterface):
                 self.testloss=testloss
                 diff = firstloss- realloss
                 testdiff = firstloss -testloss
-                significance = 0.8
+                significance = self.significance
                 if testdiff>(diff*significance): 
                     validated.remove(pot)
             

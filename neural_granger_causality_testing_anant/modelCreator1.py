@@ -19,6 +19,7 @@ import os
 from datasetCreator import make_directory
 import torch
 import gc
+from bayesianNetwork import BNTester
 
 def make_experiment():
     i = 1
@@ -29,9 +30,9 @@ def make_experiment():
 
 if(__name__ == "__main__"):
     
-    sigmas = [0.25, 0.5, 1]
+    sigmas = [0.25, 0.5, 1,2,5]
     numvars = [8, 12, 20, 48]
-    funcs = ["lorenz96", "chua"]
+    funcs = ["lotka_volterra"]
     for sigma in sigmas:
         c = False
         for numvar in numvars:
@@ -42,12 +43,17 @@ if(__name__ == "__main__"):
                     numvar = 3
                     c = True
                 base_dir = make_directory(name = func, sigma=sigma, numvars=numvar)
-                series = np.load(os.path.join(base_dir, "ito_base_1.npy"))
+                s = "rk4" if sigma==0 or func == "lotka_volterra" else "ito"
+                series = np.load(os.path.join(base_dir, s+"_base_1.npy"))
+                series = DataGenerator.normalize(series) if func == "lotka_volterra" else series
                 graph = np.load(os.path.join(base_dir, "causal_graph.npy"))
-                n = 5000
+                n = 6000
                 models = [GVARTesterTRGC(series[:n], cuda = True), TCDFTester(series[:n], cuda = True), cLSTMTester(series[:n], cuda=True)]
+                models = models+[BNTester(series[:n], cuda=True, large=True, dropout=0.7)]
                 while(len(models) > 0):
                     model = models[0]
+                    if(len(models) == 0):
+                       model.lr = 0.005
                     directory = os.path.join(base_dir, type(model).__name__)
                     if(not os.path.isdir(directory)):
                         os.makedirs(directory)

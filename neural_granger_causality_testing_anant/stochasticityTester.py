@@ -23,27 +23,27 @@ import re
 
 
 def parseNumerics(directory):
-    print(directory)
     f = open(directory+"/numerics.txt", 'r').read().replace("F1", "F")
     numeric_const_pattern = '[-+]? (?: (?: \d* \. \d+ ) | (?: \d+ \.? ) )(?: [Ee] [+-]? \d+ ) ?'
     rx = re.compile(numeric_const_pattern, re.VERBOSE)
     numbers = rx.findall(f)
     numbers = np.array([float(number) for number in numbers])
-    print(numbers)
     ret_dict = {"Precision":numbers[0], "Recall":numbers[1], "Accuracy":numbers[2], "F1 score":numbers[3], "ADF Pval":numbers[-3], "KPSS Pval": numbers[-2], "LBox Pval":numbers[-1]}
     losses = ["Error std", "Percentage std to orig", "MSE Loss from orig", "PErcentage MSE from orig"]
     newVals=  np.mean(np.reshape(numbers[4:-3],(4,-1) ), axis = 1)
     for loss, val in zip(losses, newVals):
         ret_dict[loss] = val
+    print(ret_dict["Error std"])
     return ret_dict
 
-def make_sigma_graph(numvar = None, func = None, graphName = None):
+def make_sigma_graph(numvar = None, func = None, graphName = None, unseen = False):
+    unseenStr =  "/unseen" if unseen else ""
     def plot(numvar, func, graphName):
         data = []
         for model in models:
             vals = []
             for sigma in sigmas:
-                directory = make_directory(name = func, sigma=sigma, numvars=numvar) + "/" +model +"/unseen"
+                directory = make_directory(name = func, sigma=sigma, numvars=numvar) + "/" +model + unseenStr
                 vals.append(gens[directory][graphName])
             data.append(vals)
         plt.plot(np.array(data).transpose())
@@ -56,10 +56,10 @@ def make_sigma_graph(numvar = None, func = None, graphName = None):
     numvars = [numvar] if numvar != None else [8, 12, 20]
     funcs = [func] if func != None else ["lorenz96", "lotka_volterra"]
     models = ["GVARTesterTRGC", "TCDFTester", "cLSTMTester", "BNTester"]
-    sigmas = [0, 0.05, 0.1, 0.25, 0.5, 1, 2, 5, 10]
+    sigmas = [0, 0.05, 0.1, 0.25, 0.5, 1, 2]
     losses = [graphName] if graphName != None else ["Precision", "Accuracy", "Recall", "F1 score", "Error std", "Percentage std to orig",
                       "MSE Loss from orig", "PErcentage MSE from orig", "ADF Pval", "KPSS Pval", "LBox Pval"]
-    directories = [make_directory(name = func, sigma=sigma, numvars=numvar) + "/" +model + "/unseen"
+    directories = [make_directory(name = func, sigma=sigma, numvars=numvar) + "/" +model + unseenStr
                    for sigma in sigmas for model in models for func in funcs for numvar in numvars]
     gens = {directory:parseNumerics(directory) for directory in directories}
     
@@ -68,31 +68,32 @@ def make_sigma_graph(numvar = None, func = None, graphName = None):
             for graphName in losses:
                 plot(numvar, func, graphName)
 
-def make_numvar_graph(sigma = None, func = None, graphName = None):
+def make_numvar_graph(sigma = None, func = None, graphName = None, unseen = False):
+    unseenStr = "/unseen" if unseen else ""
     def plot(numvar, func, graphName):
         data = []
         numvars = [8,12,20]
         for model in models:
             vals = []
             for numvar in numvars:
-                directory = make_directory(name = func, sigma=sigma, numvars=numvar) + "/" +model
+                directory = make_directory(name = func, sigma=sigma, numvars=numvar) + "/" +model + unseenStr
                 vals.append(gens[directory][graphName])
             data.append(vals)
         plt.plot(np.array(data).transpose())
-        plt.title(graphName+" overtime for {} data with {} stochasticity".format(func, numvar))
+        plt.title(graphName+" overtime for {} data with {} stochasticity".format(func, sigma))
         plt.legend(models)
         plt.xticks(ticks=range(len(numvars)), labels = numvars)
         plt.ylabel(graphName)
         plt.xlabel("Num Vars")
         plt.show()
     
-    sigmas = [sigma] if sigma != None else [0, 0.05, 0.1, 0.25, 0.5, 1, 2, 5, 10]
+    sigmas = [sigma] if sigma != None else [0, 0.05, 0.1, 0.25, 0.5, 1, 2]
     funcs = [func] if func != None else ["lorenz96", "lotka_volterra"]
     models = ["GVARTesterTRGC", "TCDFTester", "cLSTMTester", "BNTester"]
     numvars = [8,12,20]
     losses = [graphName] if graphName != None else ["Precision", "Recall", "Accuracy", "F1 score", "Error std", "Percentage std to orig",
                       "MSE Loss from orig", "PErcentage MSE from orig", "ADF Pval", "KPSS Pval", "LBox Pval"]
-    directories = [make_directory(name = func, sigma=sigma, numvars=numvar) + "/" +model +"/unseen"
+    directories = [make_directory(name = func, sigma=sigma, numvars=numvar) + "/" +model + unseenStr
                    for sigma in sigmas for model in models for func in funcs for numvar in numvars]
     gens = {directory:parseNumerics(directory) for directory in directories}
     for sigma in sigmas:
@@ -103,7 +104,7 @@ def make_numvar_graph(sigma = None, func = None, graphName = None):
             
 
 if(__name__ == "__main__"):
-    make_numvar_graph(func = "lorenz96", sigma = 0)
+    make_sigma_graph(func = "lorenz96", graphName = "Precision", unseen = False)
                     
                     
                         

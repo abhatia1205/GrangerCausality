@@ -151,7 +151,7 @@ class DataGenerator():
         X = odeint(funcint, x0, t, args= args)
         #X2 = np.transpose(solve_ivp(funcint3, (0, tf), x0, t_eval=t, args=args)['y'])
         #X += np.random.normal(scale=sd, size=(T + burn_in, p))
-        #X = DataGenerator.normalize(X)
+        X = DataGenerator.normalize(X)
         return X[burn_in:], ground_truth()
     
     def csv_to_graph(gtfile, N):

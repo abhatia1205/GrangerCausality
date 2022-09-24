@@ -16,8 +16,8 @@ class ModelInterface():
     
     def __init__(self, cuda):
         self.cuda = cuda
-        self.lr = 0.05
-        self.NUM_EPOCHS = 1550
+        self.lr = 0.0005
+        self.NUM_EPOCHS =3000
         self.BATCH_SIZE = 32
         self.history = []
         self.parameters = None
@@ -62,7 +62,7 @@ class ModelInterface():
             b_gen = self.batch_generator(X_train, Y_train)
             total_loss = 0
             for x_batch, y_batch in b_gen:
-                total_loss += self.closure(x_batch, y_batch, opt = optimiser)
+                total_loss += self.closure(x_batch, y_batch, opt = optimiser).item()
             print("Epoch " + str(epoch)+ " : incurred loss " + str(total_loss))
             history.append(total_loss)
         self.posttrain_procedure()
@@ -88,6 +88,8 @@ class ModelInterface():
         return graph, pred_series
     
     def save(self, directory):
+        if(not os.path.isdir(directory)):
+            os.makedirs(directory)
         f = open(os.path.join(directory, type(self).__name__+".pkl"), "wb")
         new_dict = self.__dict__.copy()
         new_dict.pop("parameters")

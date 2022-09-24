@@ -29,12 +29,12 @@ import os
     
 class GVARTesterTRGC(ModelInterface):
     
-    def __init__(self, X, cuda = False):
+    def __init__(self, X, numvars = None, cuda = False):
         
         super(GVARTesterTRGC, self).__init__(cuda)
         self.X = X
         self.device = torch.device("cuda") if cuda else torch.device('cpu')
-        self.num_vars = self.X.shape[1]
+        self.num_vars = self.X.shape[1] if numvars is None else numvars
         self.order = 10
         self.layer_size = 50
         self.num_layers = 5
@@ -45,6 +45,8 @@ class GVARTesterTRGC(ModelInterface):
         
         self.base_loss = MSELoss()
         self.alpha = 0.5
+        self.lmbd=0.1
+        self.gamma=0.1
         
     def train(self, end_epoch: int = 40, batch_size: int = 4, lmbd: float = 0.1,
                        gamma: float = 0.1, seed=42,  initial_learning_rate=0.001, beta_1=0.9,
@@ -84,7 +86,7 @@ class GVARTesterTRGC(ModelInterface):
         preds, coeffs = senn(inputs=inputs)
         return ((preds, coeffs), next_inputs)
     
-    def lossfn(self, pred, Y, senn, lmbd=0.1, gamma=0.1):
+    def lossfn(self, pred, Y, senn):
         inputs_next = pred[1]
         pred, coeffs = pred[0]
         targets = Variable(torch.tensor(Y, dtype=torch.float)).float().to(self.device)
@@ -95,7 +97,7 @@ class GVARTesterTRGC(ModelInterface):
         preds_next, coeffs_next = senn(inputs=inputs_next)
         penalty_smooth = torch.norm(coeffs_next - coeffs[1:, :, :, :], p=2)
         
-        loss = base_loss + lmbd * penalty + gamma * penalty_smooth
+        loss = base_loss + self.lmbd * penalty + self.gamma * penalty_smooth
         return loss
     
     def make_causal_estimate(self):
@@ -108,7 +110,7 @@ class GVARTesterTRGC(ModelInterface):
         predictors, responses = next(dgen)
         inputs = Variable(torch.tensor(predictors, dtype=torch.float)).float().to(self.device)
         preds2, coeffs2 = self.senn2(inputs=inputs)
-        
+        print("Coeffs: ",coeffs.shape)
         a_hat_1 = torch.max(torch.median(torch.abs(coeffs), dim=0)[0], dim=0)[0].detach().cpu().numpy()
         a_hat_2 = torch.max(torch.median(torch.abs(coeffs2), dim=0)[0], dim=0)[0].detach().cpu().numpy()
         a_hat_2 = np.transpose(a_hat_2)
