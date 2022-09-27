@@ -392,9 +392,9 @@ if(__name__ == "__main__"):
     lorenz_generator = DataGenerator(DataGenerator.lorenz96)
     series, causality_graph = lorenz_generator.integrate(p=12, T=3000, args=(10,))#1.2,.2,0.05,1.1))
     #_, series2, causality_graph = lorenz_generator.simulate(p=8, T=500, args= (10,))#82, 13.286))
-    file = "/home2/s215863/Desktop/Granger Causality/FinanceCPT/returns/random-rels_20_1_3_returns30007000.csv"
-    gt = "/home2/s215863/Desktop/Granger Causality/FinanceCPT/relationships/random-rels_20_1_3.csv"
-    #series, causality_graph = DataGenerator.finance(file, gt)
+    file = "/home2/s215863/Desktop/GrangerCausality/will_data/normalized_training_data.csv"
+    #gt = "/home2/s215863/Desktop/Granger Causality/FinanceCPT/relationships/random-rels_20_1_3.csv"
+    series, causality_graph = DataGenerator.finance(file)
     
     # from datasetCreator import make_directory
     # base_dir = make_directory(name = "lotka_volterra", sigma=0.05, numvars=12)
@@ -404,7 +404,7 @@ if(__name__ == "__main__"):
     
     n = int(0.8*len(series))
     print(n)
-    lstmTester = BNTester(series[:n], cuda = True, large=False)
+    lstmTester = GVARTesterTRGC(series, cuda = True)
     lstmTester.NUM_EPOCHS = 1000
     lstmTester.trainInherit()
     torch.cuda.empty_cache()
@@ -414,14 +414,14 @@ if(__name__ == "__main__"):
     metrics.vis_causal_graphs()
     metrics.prec_rec_acc_f1()
     
-    lstmTester = BNTester(series[:n], cuda = True, large=True)
-    lstmTester.NUM_EPOCHS = 1000
-    lstmTester.trainInherit()
-    torch.cuda.empty_cache()
-    gc.collect()
-    metrics = Metrics(lstmTester, causality_graph, series)
-    metrics.vis_pred(start = n)
-    metrics.vis_causal_graphs()
+    # lstmTester = BNTester(series[:n], cuda = True, large=True)
+    # lstmTester.NUM_EPOCHS = 1000
+    # lstmTester.trainInherit()
+    # torch.cuda.empty_cache()
+    # gc.collect()
+    # metrics = Metrics(lstmTester, causality_graph, series)
+    # metrics.vis_pred(start = n)
+    # metrics.vis_causal_graphs()
 
 
     # lstmTester2 = GVARTesterTRGC(series[:n], cuda = True)

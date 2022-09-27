@@ -142,7 +142,7 @@ class GVARTesterTRGC(ModelInterface):
         q_1 = np.quantile(a=a_hat_1, q=alpha_opt)
         self.graph_est = (a_hat_1 >= q_1) * 1.0
         self.true_graph = a_hat_1
-    
+        self.coeffs = coeffs
         return self.graph_est
 
 
