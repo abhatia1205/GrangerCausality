@@ -170,7 +170,7 @@ class DataGenerator():
     def finance(file, gtfile = None):
         x = pd.read_csv(file).values
         if(gtfile == None):
-            return file, gtfile
+            return x, gtfile
         gt = DataGenerator.csv_to_graph(gtfile, x.shape[1])
         return x, gt
 
