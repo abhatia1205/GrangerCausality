@@ -404,7 +404,7 @@ if(__name__ == "__main__"):
     
     n = int(0.8*len(series))
     print(n)
-    lstmTester = GVARTesterTRGC(series, cuda = True)
+    lstmTester = BNTester(series, cuda = True, large=True)
     lstmTester.NUM_EPOCHS = 1000
     lstmTester.trainInherit()
     torch.cuda.empty_cache()
