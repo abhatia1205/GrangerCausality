@@ -35,7 +35,7 @@ class GVARTesterTRGC(ModelInterface):
         self.X = X
         self.device = torch.device("cuda") if cuda else torch.device('cpu')
         self.num_vars = self.X.shape[1] if numvars is None else numvars
-        self.order = 10
+        self.order = 25
         self.layer_size = 50
         self.num_layers = 5
         self.senn = SENNGC(self.num_vars, self.order, self.layer_size, self.num_layers, self.device).to(self.device)

@@ -16,7 +16,7 @@ class ModelInterface():
     
     def __init__(self, cuda):
         self.cuda = cuda
-        self.lr = 0.0005
+        self.lr = 0.0001
         self.NUM_EPOCHS =3000
         self.BATCH_SIZE = 32
         self.history = []
