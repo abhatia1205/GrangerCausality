@@ -225,7 +225,7 @@ class BNTester(ModelInterface):
         base_loss = sum([F.mse_loss(pred[:,i], targets[:,i]) for i in range(self.numVars)])
         return base_loss
     
-    def make_GC_graph(self, x, plotSwitch = False, q = 0.5):
+    def make_GC_graph(self, x, plotSwitch = False, q = 1):
         return self.make_GC_graph2(x, BNTester.E_t_Var_n, BNTester.mean_threshold, argument = self.std_significance)
     
     def E_n_Var_t(arr):
