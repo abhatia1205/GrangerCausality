@@ -392,7 +392,7 @@ if(__name__ == "__main__"):
     lorenz_generator = DataGenerator(DataGenerator.lorenz96)
     series, causality_graph = lorenz_generator.integrate(p=12, T=3000, args=(10,))#1.2,.2,0.05,1.1))
     #_, series2, causality_graph = lorenz_generator.simulate(p=8, T=500, args= (10,))#82, 13.286))
-    file = "/home2/s215863/Desktop/GrangerCausality/will_data/cross_validated_data/cv_norm_precovid_train5.csv"
+    file = "/home2/s215863/Desktop/GrangerCausality/fx_data/normalized_training_data.csv"
     #gt = "/home2/s215863/Desktop/Granger Causality/FinanceCPT/relationships/random-rels_20_1_3.csv"
     series, causality_graph = DataGenerator.finance(file)
     
