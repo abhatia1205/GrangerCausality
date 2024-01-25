@@ -167,8 +167,13 @@ class DataGenerator():
             ret[key][value] = 1
         return ret
     
-    def finance(file, gtfile):
-        x = pd.read_csv(file).values
+    def finance(file, gtfile = None):
+        x = pd.read_csv(file, index_col = False)
+        if("Date" in list(x.columns)):
+            x = x.drop(columns = ["Date"])
+        x = x.values
+        if(gtfile == None):
+            return x, gtfile
         gt = DataGenerator.csv_to_graph(gtfile, x.shape[1])
         return x, gt
 
