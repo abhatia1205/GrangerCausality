@@ -175,6 +175,9 @@ class DataGenerator():
 
 
 if(__name__ == "__main__"):
+    # lorenz_generator = DataGenerator(DataGenerator.lorenz96_func)
+    # series = lorenz_generator.create_series([[0.64994384, 0.01750787, 0.72402577, 0.14358566, 0.502893]], F = 8)
+    # lorenz_generator.ApEn_data(data = np.random.normal(20, 2, size = 20))
     lorenz_generator = DataGenerator(DataGenerator.lorenz96_func)
-    series = lorenz_generator.create_series([[0.64994384, 0.01750787, 0.72402577, 0.14358566, 0.502893]], F = 8)
-    lorenz_generator.ApEn_data(data = np.random.normal(20, 2, size = 20))
+    
+
